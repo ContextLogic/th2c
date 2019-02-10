@@ -23,19 +23,12 @@ log = logging.getLogger(__name__)
 
 
 class AsyncHTTP2Client(object):
-    CLIENT_INSTANCES = dict()
 
     def __new__(cls, host, port, *args, **kwargs):
         """
         Create an asynchronous HTTP/2 client for this (host, port).
-        Only one instance of AsyncHTTP2Client exists per (host, port).
         """
-        if (host, port) in cls.CLIENT_INSTANCES:
-            client = cls.CLIENT_INSTANCES[(host, port)]
-        else:
-            client = super(AsyncHTTP2Client, cls).__new__(cls)
-            cls.CLIENT_INSTANCES[(host, port)] = client
-
+        client = super(AsyncHTTP2Client, cls).__new__(cls)
         return client
 
     def __init__(self, host, port, secure=True, verify_certificate=True,
@@ -249,10 +242,15 @@ class AsyncHTTP2Client(object):
                                       from the list of active streams.
         :param callback: function executed when the request finishes
         """
-        stream = self.stream_cls(
-            self.connection, request, callback_clear_active, callback,
-            self.io_loop
-        )
+        try:
+            stream = self.stream_cls(
+                self.connection, request, callback_clear_active, callback,
+                self.io_loop
+            )
+        except Exception as e:
+            callback_clear_active()
+            callback(e)
+            return
 
         with stack_context.ExceptionStackContext(stream.handle_exception):
             stream.begin_request()
