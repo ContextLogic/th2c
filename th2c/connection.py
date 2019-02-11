@@ -52,8 +52,6 @@ class HTTP2ClientConnection(object):
         :param max_concurrent_streams: maximum number of concurrent streams
         :type max_concurrent_streams: int
         """
-        IOLoop.current() = io_loop
-
         self.host = host
         self.port = port
         self.secure = secure

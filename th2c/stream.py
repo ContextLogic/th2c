@@ -33,7 +33,6 @@ class HTTP2ClientStream(object):
         :param callback_response: should be called with the final result
         :param io_loop: instance of a tornado IOLoop object
         """
-        IOLoop.current() = io_loop
         self.connection = connection
         self.request = request
 
