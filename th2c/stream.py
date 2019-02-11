@@ -8,6 +8,7 @@ import h2.events
 import h2.exceptions
 from tornado import httputil, gen
 from tornado.escape import to_unicode
+from tornado.ioloop import IOLoop
 
 from .exceptions import RequestTimeout, TH2CError
 from .flowcontrol import FlowControlWindow
@@ -22,8 +23,7 @@ class HTTP2ClientStream(object):
     }
 
     def __init__(self, connection, request,
-                 callback_cleanup, callback_response,
-                 io_loop):
+                 callback_cleanup, callback_response):
         """
         :param connection: connection object
         :type connection: th2c.connection.HTTP2ClientConnection
@@ -33,7 +33,7 @@ class HTTP2ClientStream(object):
         :param callback_response: should be called with the final result
         :param io_loop: instance of a tornado IOLoop object
         """
-        self.io_loop = io_loop
+        IOLoop.current() = io_loop
         self.connection = connection
         self.request = request
 
@@ -57,7 +57,7 @@ class HTTP2ClientStream(object):
 
         self._timeout = None
         if request.request_timeout:
-            self._timeout = self.io_loop.add_timeout(
+            self._timeout = IOLoop.current().add_timeout(
                 self.request.start_time + request.request_timeout,
                 self.on_timeout
             )
@@ -68,7 +68,7 @@ class HTTP2ClientStream(object):
         self.max_frame_size = self.connection.max_frame_size
 
     def on_timeout(self):
-        self.io_loop.remove_timeout(self._timeout)
+        IOLoop.current().remove_timeout(self._timeout)
         self._timeout = None
         self.timed_out = True
 
@@ -259,7 +259,7 @@ class HTTP2ClientStream(object):
         self.connection.end_stream(self)
 
         if self._timeout:
-            self.io_loop.remove_timeout(self._timeout)
+            IOLoop.current().remove_timeout(self._timeout)
             self._timeout = None
 
         if exc:
@@ -274,7 +274,7 @@ class HTTP2ClientStream(object):
                 reason=self.reason,
                 headers=self.headers,
                 buffer=data,
-                request_time=self.io_loop.time() - self.request.start_time,
+                request_time=IOLoop.current().time() - self.request.start_time,
                 effective_url=self.request.url
             )
 

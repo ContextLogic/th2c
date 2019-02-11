@@ -32,8 +32,7 @@ class AsyncHTTP2Client(object):
         return client
 
     def __init__(self, host, port, secure=True, verify_certificate=True,
-                 client_key=None, client_cert=None, io_loop=None,
-                 auto_reconnect=True,
+                 client_key=None, client_cert=None, auto_reconnect=True,
                  auto_reconnect_interval=DEFAULT_RECONNECT_INTERVAL,
                  _connection_cls=HTTP2ClientConnection,
                  _stream_cls=HTTP2ClientStream, **kwargs):
@@ -42,8 +41,6 @@ class AsyncHTTP2Client(object):
             return
         else:
             self.initialized = True
-
-        self.io_loop = io_loop or IOLoop.instance()
 
         self.host = host
         self.port = port
@@ -72,6 +69,7 @@ class AsyncHTTP2Client(object):
         self.stream_cls = _stream_cls
 
         self.tcp_client = TCPClient()
+        self.no_more_stream_ids = False
 
         self.connection = None
 
@@ -79,7 +77,7 @@ class AsyncHTTP2Client(object):
 
     def connect(self):
         self.connection = self.connection_cls(
-            self.host, self.port, self.tcp_client, self.secure, self.io_loop,
+            self.host, self.port, self.tcp_client, self.secure,
             self.on_connection_ready, self.on_connection_closed,
             ssl_options={
                 'verify_certificate': self.verify_certificate,
@@ -118,8 +116,8 @@ class AsyncHTTP2Client(object):
                 'Attempting to reconnect after %d seconds',
                 self.auto_reconnect_interval
             )
-            self.io_loop.add_timeout(
-                self.io_loop.time() + self.auto_reconnect_interval,
+            IOLoop.current().add_timeout(
+                IOLoop.current().time() + self.auto_reconnect_interval,
                 self.connect
             )
         else:
@@ -127,7 +125,7 @@ class AsyncHTTP2Client(object):
                 key, _, callback = self.pending_requests.popleft()
                 if key in self.queue_timeouts:
                     _, _, timeout_handle = self.queue_timeouts[key]
-                    self.io_loop.remove_timeout(timeout_handle)
+                    IOLoop.current().remove_timeout(timeout_handle)
                     del self.queue_timeouts[key]
 
                 callback(reason)
@@ -157,6 +155,8 @@ class AsyncHTTP2Client(object):
         :type request: tornado.httpclient.HTTPRequest
         :return: Future
         """
+        if self.no_more_stream_ids:
+            raise h2.exceptions.NoAvailableStreamId()
         # prepare the request object
         request.headers = httputil.HTTPHeaders(request.headers)
         request = _RequestProxy(request, dict(HTTPRequest._DEFAULTS))
@@ -186,8 +186,8 @@ class AsyncHTTP2Client(object):
             not self.connection or not self.connection.is_ready
             or len(self.active_requests) >= self.max_active_requests
         ):
-            timeout_handle = self.io_loop.add_timeout(
-                self.io_loop.time() + request.request_timeout,
+            timeout_handle = IOLoop.current().add_timeout(
+                IOLoop.current().time() + request.request_timeout,
                 functools.partial(self.on_queue_timeout, key)
             )
         else:
@@ -219,7 +219,7 @@ class AsyncHTTP2Client(object):
 
                 request, callback, timeout_handle = self.queue_timeouts[key]
                 if timeout_handle is not None:
-                    self.io_loop.remove_timeout(timeout_handle)
+                    IOLoop.current().remove_timeout(timeout_handle)
                 del self.queue_timeouts[key]
 
                 self.active_requests[key] = (request, callback)
@@ -241,10 +241,11 @@ class AsyncHTTP2Client(object):
         """
         try:
             stream = self.stream_cls(
-                self.connection, request, callback_clear_active, callback,
-                self.io_loop
+                self.connection, request, callback_clear_active, callback
             )
         except Exception as e:
+            if isinstance(e, h2.exceptions.NoAvailableStreamId):
+                self.no_more_stream_ids = True
             callback_clear_active()
             callback(e)
             return
@@ -259,6 +260,9 @@ class AsyncHTTP2Client(object):
         """
         log.debug('Stream removed from active requests')
         del self.active_requests[key]
+        if self.no_more_stream_ids:
+            if len(active_requests) <= 0:
+                self.close()
 
         self.process_pending_requests()
 

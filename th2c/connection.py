@@ -12,6 +12,7 @@ import h2.exceptions
 import h2.settings
 from tornado import stack_context
 from tornado.iostream import StreamClosedError
+from tornado.ioloop import IOLoop
 
 from .config import (DEFAULT_WINDOW_SIZE,
                      MAX_FRAME_SIZE,
@@ -27,7 +28,7 @@ AlPN_PROTOCOLS = ['h2']
 
 class HTTP2ClientConnection(object):
 
-    def __init__(self, host, port, tcp_client, secure, io_loop,
+    def __init__(self, host, port, tcp_client, secure,
                  on_connection_ready=None, on_connection_closed=None,
                  connect_timeout=DEFAULT_CONNECTION_TIMEOUT, ssl_options=None,
                  max_concurrent_streams=MAX_CONCURRENT_STREAMS):
@@ -51,7 +52,7 @@ class HTTP2ClientConnection(object):
         :param max_concurrent_streams: maximum number of concurrent streams
         :type max_concurrent_streams: int
         """
-        self.io_loop = io_loop
+        IOLoop.current() = io_loop
 
         self.host = host
         self.port = port
@@ -140,8 +141,8 @@ class HTTP2ClientConnection(object):
         self.closed = False
 
         # set the connection timeout
-        start_time = self.io_loop.time()
-        self._connect_timeout_t = self.io_loop.add_timeout(
+        start_time = IOLoop.current().time()
+        self._connect_timeout_t = IOLoop.current().add_timeout(
             start_time + self.connect_timeout, self.on_timeout
         )
 
@@ -163,7 +164,7 @@ class HTTP2ClientConnection(object):
         log.debug('Closing HTTP2Connection with reason %s', reason)
 
         if self._connect_timeout_t:
-            self.io_loop.remove_timeout(self._connect_timeout_t)
+            IOLoop.current().remove_timeout(self._connect_timeout_t)
             self._connect_timeout_t = None
 
         if self.h2conn:
@@ -222,7 +223,7 @@ class HTTP2ClientConnection(object):
         self._is_connected = True
 
         # remove the connection timeout
-        self.io_loop.remove_timeout(self._connect_timeout_t)
+        IOLoop.current().remove_timeout(self._connect_timeout_t)
         self._connect_timeout_t = None
 
         self.io_stream = io_stream
