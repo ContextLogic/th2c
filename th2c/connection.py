@@ -109,20 +109,20 @@ class HTTP2ClientConnection(object):
             return
 
         ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        ssl_context.options |= ssl.OP_NO_TLSv1
-        ssl_context.options |= ssl.OP_NO_TLSv1_1
+        ssl_context.options |= (ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1)
+        ssl_context.options |= ssl.OP_NO_COMPRESSION
+        ssl_context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
 
         if not self.ssl_options.get('verify_certificate', True):
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
 
-        if self.ssl_options.get('key') and self.ssl_options.get('cert'):
+        if self.ssl_options.get('cert'):
             ssl_context.load_cert_chain(
                 self.ssl_options.get('cert'),
                 keyfile=self.ssl_options.get('key')
             )
 
-        ssl_context.set_ciphers('ECDHE+AESGCM')
         ssl_context.set_alpn_protocols(AlPN_PROTOCOLS)
 
         self.ssl_context = ssl_context
