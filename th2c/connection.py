@@ -242,8 +242,6 @@ class HTTP2ClientConnection(object):
         # disable server push
         self.h2conn.update_settings({
             h2.settings.SettingCodes.ENABLE_PUSH: 0,
-            h2.settings.SettingCodes.MAX_CONCURRENT_STREAMS:
-                self.max_concurrent_streams,
             h2.settings.SettingCodes.INITIAL_WINDOW_SIZE:
                 self.initial_window_size
         })

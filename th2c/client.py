@@ -32,8 +32,7 @@ class AsyncHTTP2Client(object):
         return client
 
     def __init__(self, host, port, secure=True, verify_certificate=True,
-                 ssl_key=None, ssl_cert=None,
-                 max_active_requests=10, io_loop=None,
+                 ssl_key=None, ssl_cert=None, io_loop=None,
                  auto_reconnect=False,
                  auto_reconnect_interval=DEFAULT_RECONNECT_INTERVAL,
                  _connection_cls=HTTP2ClientConnection,
@@ -62,7 +61,8 @@ class AsyncHTTP2Client(object):
 
         self.auto_reconnect = auto_reconnect
         self.auto_reconnect_interval = auto_reconnect_interval
-        self.max_active_requests = max_active_requests
+        # Default 100 per http2 advice, but this can get changed by the remote
+        self.max_active_requests = 100
 
         self.pending_requests = collections.deque()
         self.queue_timeouts = dict()
@@ -87,7 +87,6 @@ class AsyncHTTP2Client(object):
                 'cert': self.ssl_cert
             },
             connect_timeout=self.connection_timeout,
-            max_concurrent_streams=self.max_active_requests,
         )
         self.connection.add_event_handler(
             h2.events.RemoteSettingsChanged, self.on_settings_changed
@@ -146,9 +145,7 @@ class AsyncHTTP2Client(object):
                 max_requests.original_value,
                 max_requests.new_value
             )
-            self.max_active_requests = min(
-                max_requests.new_value, self.max_active_requests
-            )
+            self.max_active_requests = max_requests.new_value
 
     def fetch(self, request):
         """
