@@ -20,6 +20,7 @@ from .config import (DEFAULT_WINDOW_SIZE,
                      MAX_CONCURRENT_STREAMS)
 from .exceptions import ConnectionError, ConnectionTimeout
 from .flowcontrol import FlowControlWindow
+from tornado.curl_httpclient import _DEFAULT_CA_CERTS
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ class HTTP2ClientConnection(object):
         ssl_context.options |= (ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1)
         ssl_context.options |= ssl.OP_NO_COMPRESSION
         ssl_context.set_ciphers("ECDHE+AESGCM")
+        ssl_context.load_verify_locations(_DEFAULT_CA_CERTS)
 
         if not self.ssl_options.get('verify_certificate', True):
             ssl_context.check_hostname = False
