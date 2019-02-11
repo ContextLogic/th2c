@@ -110,7 +110,7 @@ class HTTP2ClientConnection(object):
         ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         ssl_context.options |= (ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1)
         ssl_context.options |= ssl.OP_NO_COMPRESSION
-        ssl_context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")
+        ssl_context.set_ciphers("ECDHE+AESGCM")
 
         if not self.ssl_options.get('verify_certificate', True):
             ssl_context.check_hostname = False
