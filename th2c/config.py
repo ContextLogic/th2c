@@ -15,4 +15,4 @@ DEFAULT_CONNECTION_TIMEOUT = 5  # seconds
 # Default number of seconds to wait before trying to reconnect.
 # This setting is used only if AsyncHTTP2Client has been instantiated
 # with auto_reconnect=True.
-DEFAULT_RECONNECT_INTERVAL = 0.1  # seconds
+DEFAULT_RECONNECT_INTERVAL = 0.01  # seconds

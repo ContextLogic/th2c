@@ -32,8 +32,8 @@ class AsyncHTTP2Client(object):
         return client
 
     def __init__(self, host, port, secure=True, verify_certificate=True,
-                 ssl_key=None, ssl_cert=None, io_loop=None,
-                 auto_reconnect=False,
+                 client_key=None, client_cert=None, io_loop=None,
+                 auto_reconnect=True,
                  auto_reconnect_interval=DEFAULT_RECONNECT_INTERVAL,
                  _connection_cls=HTTP2ClientConnection,
                  _stream_cls=HTTP2ClientStream, **kwargs):
@@ -50,8 +50,8 @@ class AsyncHTTP2Client(object):
 
         self.secure = secure
         self.verify_certificate = verify_certificate
-        self.ssl_key = ssl_key
-        self.ssl_cert = ssl_cert
+        self.ssl_key = client_key
+        self.ssl_cert = client_cert
 
         self.closed = False
 
